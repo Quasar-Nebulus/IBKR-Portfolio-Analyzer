@@ -1,0 +1,19 @@
+# Configuration GitHub Pages
+theme: jekyll-theme-minimal
+title: IBKR Portfolio Analyzer
+description: Analyse de portefeuille IBKR 100% locale avec FlexQuery
+show_downloads: false
+
+# Paramètres
+include: [".htaccess"]
+exclude: ["*.gemfile", "*.gemfile.lock", "node_modules", "vendor/bundle/", "vendor/cache/", "vendor/gems/", "vendor/ruby/", ".sass-cache", ".jekyll-cache", "gemfiles"]
+
+# Plugins
+plugins:
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Permet les fichiers HTML
+markdown: kramdown
+kramdown:
+  input: GFM
