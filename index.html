@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyseur Portefeuille IBKR - 100% Local</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #333; 
+            background-color: #f8f9fa;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* ==========================================
+           SIDEBAR GAUCHE (15%)
+           ========================================== */
+
+        .sidebar {
+            width: 15%;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+        }
+
+        .sidebar-header {
+            padding: 20px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 15px 0;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 20px;
+        }
+
+        .nav-section-title {
+            padding: 10px 15px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            color: #cbd5e1;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            border-left-color: #2563eb;
+        }
+
+        .sidebar-footer {
+            padding: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .sidebar-footer label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        /* ==========================================
+           CONTENU DROIT (85%)
+           ========================================== */
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e9ecef;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            color: #0f172a;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* ==========================================
+           CARTES ET COMPOSANTS
+           ========================================== */
+
+        .card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            margin-bottom: 25px; 
+            border: 1px solid #e9ecef; 
+        }
+
+        h3 { color: #334155; margin-top: 0; margin-bottom: 15px; }
+
+        .btn { 
+            background: #2563eb; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: #1d4ed8; }
+        .btn.danger { background: #dc2626; }
+        .btn.danger:hover { background: #991b1b; }
+        .btn.success { background: #16a34a; }
+        .btn.success:hover { background: #15803d; }
+
+        input[type="file"] {
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        select { 
+            padding: 10px; 
+            border-radius: 6px; 
+            border: 1px solid #cbd5e1; 
+            width: 100%; 
+            max-width: 400px; 
+            font-size: 15px; 
+            margin-bottom: 20px; 
+        }
+
+        .alert { 
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            border-left: 4px solid;
+        }
+
+        .alert.info {
+            background: #e0f2fe;
+            border-left-color: #0284c7;
+            color: #0c4a6e;
+        }
+
+        .alert.success {
+            background: #dcfce7;
+            border-left-color: #16a34a;
+            color: #166534;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            border-left-color: #dc2626;
+            color: #7f1d1d;
+        }
+
+        .table-container { 
+            overflow-x: auto; 
+            background: white; 
+            border-radius: 8px; 
+            border: 1px solid #e2e8f0;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            text-align: left; 
+            font-size: 14px; 
+        }
+
+        th { 
+            background: #f1f5f9; 
+            padding: 12px 16px; 
+            font-weight: 600; 
+            color: #475569; 
+            border-bottom: 2px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+        }
+
+        td { 
+            padding: 12px 16px; 
+            border-bottom: 1px solid #e2e8f0; 
+        }
+
+        tr:hover { background-color: #f8fafc; }
+
+        .badge { 
+            background: #e2e8f0; 
+            padding: 4px 10px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge.primary { background: #dbeafe; color: #1e40af; }
+        .badge.success { background: #dcfce7; color: #166534; }
+        .badge.warning { background: #fef08a; color: #92400e; }
+        .badge.danger { background: #fee2e2; color: #991b1b; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+
+        .stat-box .label {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-box .value {
+            color: #0f172a;
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==========================================
+         SIDEBAR GAUCHE (15%)
+         ========================================== -->
+    
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>📊 IBKR ANALYZER</h2>
+            <p>v1.0 - 100% Local</p>
+        </div>
+
+        <div class="sidebar-nav">
+            <!-- Section Données -->
+            <div class="nav-section">
+                <div class="nav-section-title">📥 Données</div>
+                <div class="nav-item active" onclick="afficherVue('import')">
+                    <span>📂</span> Importer CSV
+                </div>
+                <div class="nav-item" onclick="afficherVue('explorer')">
+                    <span>🔍</span> Explorer
+                </div>
+            </div>
+
+            <!-- Section Analyse -->
+            <div class="nav-section">
+                <div class="nav-section-title">📈 Analyse</div>
+                <div class="nav-item" onclick="afficherVue('stats')">
+                    <span>📊</span> Statistiques
+                </div>
+                <div class="nav-item" onclick="afficherVue('roulements')">
+                    <span>🔄</span> Roulements
+                </div>
+            </div>
+
+            <!-- Section Fiscalité -->
+            <div class="nav-section">
+                <div class="nav-section-title">🏛️ Fiscalité</div>
+                <div class="nav-item" onclick="afficherVue('ifu')">
+                    <span>📋</span> Générer IFU
+                </div>
+                <div class="nav-item" onclick="afficherVue('usa-tax')">
+                    <span>🇺🇸</span> Retenues USA
+                </div>
+            </div>
+
+            <!-- Section Paramètres -->
+            <div class="nav-section">
+                <div class="nav-section-title">⚙️ Paramètres</div>
+                <div class="nav-item" onclick="afficherVue('settings')">
+                    <span>⚙️</span> Paramètres
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="checkbox-group">
+                <input type="checkbox" id="debugMode" onchange="toggleDebug()">
+                <label for="debugMode">Debug</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="darkMode" onchange="toggleDarkMode()">
+                <label for="darkMode">Mode sombre</label>
+            </div>
+            <p style="margin-top: 15px; font-size: 11px;">
+                🔒 Vos données restent en local.<br>Aucun upload vers serveur.
+            </p>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         CONTENU DROIT (85%)
+         ========================================== -->
+
+    <div class="main-content">
+        <div class="header">
+            <h1 id="headerTitle">Importer vos données IBKR</h1>
+            <p id="headerSubtitle">Sélectionnez vos fichiers CSV exportés depuis Interactive Brokers</p>
+        </div>
+
+        <div class="content">
+
+            <!-- ========== VUE : IMPORT ========== -->
+            <div id="view-import" class="view active">
+                <div class="card">
+                    <h3>📥 Importer vos fichiers CSV IBKR</h3>
+                    <input type="file" id="fichiersInput" accept=".csv" multiple>
+                    <button class="btn" onclick="traiterFichiersMultiples()">📤 Consolider les données</button>
+                    <button class="btn success" onclick="chargerDupeDB()">↙️ Charger du stockage local</button>
+                    <div id="statutImport" class="alert info" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- ========== VUE : EXPLORER ========== -->
+            <div id="view-explorer" class="view" style="display: none;">
+                <div class="card">
+                    <h3>🔍 Explorer vos données par catégorie</h3>
+                    <label for="selectCategorie">Sélectionnez une catégorie :</label>
+                    <select id="selectCategorie" onchange="afficherDonneesCategorie()"></select>
+                    <div class="table-container">
+                        <table id="tableauDonnees">
+                            <thead id="enteteTableau"></thead>
+                            <tbody id="corpsTableau"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== VUE : STATISTIQUES ========== -->
+            <div id="view-stats" class="view" style="display: none;">
+                <div class="card">
+                    <h3>📊 Statistiques globales</h3>
+                    <div class="stats-grid" id="statsGrid"></div>
+                </div>
+                <div class="card">
+                    <h3>📅 Répartition par année</h3>
+                    <div id="statsYears" style="font-size: 14px; line-height: 1.8;"></div>
+                </div>
+                <div class="card">
+                    <h3>📊 Répartition par catégorie</h3>
+                    <div id="statsCategories" style="font-size: 14px; line-height: 1.8;"></div>
+                </div>
+            </div>
+
+            <!-- ========== VUE : ROULEMENTS ========== -->
+            <div id="view-roulements" class="view" style="display: none;">
+                <div class="card">
+                    <h3>🔄 Détection des roulements d'options</h3>
+                    <div id="roulementsContent"></div>
+                </div>
+            </div>
+
+            <!-- ========== VUE : IFU ========== -->
+            <div id="view-ifu" class="view" style="display: none;">
+                <div class="card">
+                    <h3>📋 Générer un IFU (en développement)</h3>
+                    <p>Cette fonctionnalité sera disponible prochainement.</p>
+                </div>
+            </div>
+
+            <!-- ========== VUE : RETENUES USA ========== -->
+            <div id="view-usa-tax" class="view" style="display: none;">
+                <div class="card">
+                    <h3>🇺🇸 Calcul des retenues fiscales USA (en développement)</h3>
+                    <p>Analyse des retenues d'impôt sur dividendes et intérêts.</p>
+                </div>
+            </div>
+
+            <!-- ========== VUE : PARAMÈTRES ========== -->
+            <div id="view-settings" class="view" style="display: none;">
+                <div class="card">
+                    <h3>⚙️ Paramètres</h3>
+                    <button class="btn danger" onclick="confirmerViderBase()">🗑️ Vider la base de données</button>
+                    <div id="settingsInfo" style="margin-top: 20px; font-size: 14px;"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ============ CLASSE IndexedDB ============
+        class IBKRDatabase {
+            constructor() {
+                this.db = null;
+            }
+
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('IBKRPortfolio', 1);
+
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        resolve(this.db);
+                    };
+
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        
+                        // Store transactions
+                        if (!db.objectStoreNames.contains('transactions')) {
+                            const store = db.createObjectStore('transactions', { keyPath: 'id' });
+                            store.createIndex('date', 'date', { unique: false });
+                            store.createIndex('symbole', 'symbole', { unique: false });
+                            store.createIndex('categorie', 'categorie', { unique: false });
+                            store.createIndex('annee', 'annee', { unique: false });
+                        }
+
+                        // Store metadata
+                        if (!db.objectStoreNames.contains('metadata')) {
+                            db.createObjectStore('metadata', { keyPath: 'key' });
+                        }
+                    };
+                });
+            }
+
+            getDb() {
+                return this.db;
+            }
+
+            async clear() {
+                const tx = this.db.transaction(['transactions', 'metadata'], 'readwrite');
+                await Promise.all([
+                    new Promise((resolve) => {
+                        const req = tx.objectStore('transactions').clear();
+                        req.onsuccess = resolve;
+                    }),
+                    new Promise((resolve) => {
+                        const req = tx.objectStore('metadata').clear();
+                        req.onsuccess = resolve;
+                    })
+                ]);
+            }
+
+            async getAll(storeName) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([storeName], 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async put(storeName, obj) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction([storeName], 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    const request = store.put(obj);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+        }
+
+        // ============ VARIABLES GLOBALES ============
+        let ibkrDb;
+        let baseDonneesCategories = {};
+        let relationsDetectees = { roulements: new Map(), ajustements: new Map() };
+
+        // ============ UTILITAIRES ============
+        function afficherVue(viewName) {
+            // Masquer toutes les vues
+            document.querySelectorAll('.view').forEach(v => {
+                v.classList.remove('active');
+                v.style.display = 'none';
+            });
+
+            // Afficher la vue demandée
+            const viewElement = document.getElementById(`view-${viewName}`);
+            if (viewElement) {
+                viewElement.classList.add('active');
+                viewElement.style.display = 'block';
+            }
+
+            // Mettre à jour le header
+            const titles = {
+                'import': ['📥 Importer vos données', 'Sélectionnez vos fichiers CSV exportés depuis Interactive Brokers'],
+                'explorer': ['🔍 Explorer les données', 'Consultez vos transactions par catégorie'],
+                'stats': ['📊 Statistiques globales', 'Vue d\'ensemble de votre portefeuille'],
+                'roulements': ['🔄 Roulements détectés', 'Identifiez les fermetures et réouvertures rapides'],
+                'ifu': ['📋 Générer un IFU', 'Rapport fiscal pour la déclaration'],
+                'usa-tax': ['🇺🇸 Retenues fiscales USA', 'Analyse des retenues d\'impôt'],
+                'settings': ['⚙️ Paramètres', 'Configuration et gestion des données']
+            };
+
+            if (titles[viewName]) {
+                document.getElementById('headerTitle').textContent = titles[viewName][0];
+                document.getElementById('headerSubtitle').textContent = titles[viewName][1];
+            }
+
+            // Mettre à jour la barre latérale
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.nav-item')?.classList.add('active');
+
+            // Charger le contenu si nécessaire
+            if (viewName === 'stats') afficherStatistiques();
+            if (viewName === 'roulements') afficherRoulements();
+        }
+
+        function afficherAlerte(message, type = "info") {
+            const div = document.getElementById("statutImport");
+            div.className = `alert ${type}`;
+            div.innerHTML = message;
+            div.style.display = 'block';
+        }
+
+        function parseCSVLine(text) {
+            let p = '', r = [];
+            let q = false;
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                if (c === '"') { q = !q; }
+                else if (c === ',' && !q) { r.push(p.trim()); p = ''; }
+                else { p += c; }
+            }
+            r.push(p.trim());
+            return r.map(val => val.replace(/^"|"$/g, ''));
+        }
+
+        // ============ EXTRACTION INTELLIGENTE COLONNES ============
+        const COLUMN_MAPPING = {
+            "Transactions": {
+                dateCol: 1,
+                heureCol: 2,
+                symbolCol: 3,
+                montantCol: 6
+            },
+            "Dividendes": {
+                dateCol: 3,
+                symbolCol: 0,
+                montantCol: 2
+            },
+            "Intérêt": {
+                dateCol: 2,
+                symbolCol: 0,
+                montantCol: 1
+            }
+        };
+
+        function extraireColonne(categorie, ligne, typeCol) {
+            if (COLUMN_MAPPING[categorie] && COLUMN_MAPPING[categorie][typeCol] >= 0) {
+                const idx = COLUMN_MAPPING[categorie][typeCol];
+                return idx < ligne.length ? ligne[idx] : "";
+            }
+
+            switch(typeCol) {
+                case 'dateCol':
+                    return ligne.find(c => /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$/.test(c)) || "";
+                case 'symbolCol':
+                    return ligne.find(c => /^[A-Z]{1,6}$/.test(c)) || "";
+                case 'montantCol':
+                    return ligne.find(c => /^-?\d+[.,]\d{2}$|^-?\d+$/.test(c)) || "";
+                default:
+                    return "";
+            }
+        }
+
+        function normaliserDate(dateStr) {
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+                const [jour, mois, annee] = dateStr.split('/');
+                return `${annee}-${mois}-${jour}`;
+            }
+            return dateStr;
+        }
+
+        // ============ CALCULATEUR CLÉ MÉTIER ============
+        class CleMetierCalculator {
+            static async calculerCle(categorie, date, heure, symbole, montant, description) {
+                const input = `${categorie}|${date}|${heure}|${symbole}|${montant}|${description}`;
+                const encoder = new TextEncoder();
+                const data = encoder.encode(input);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                return hashHex.substring(0, 16);
+            }
+        }
+
+        // ============ TRAITEMENT FICHIERS CSV ============
+        async function traiterFichiersMultiples() {
+            const input = document.getElementById('fichiersInput');
+            
+            if (input.files.length === 0) {
+                afficherAlerte("❌ Veuillez sélectionner au moins un fichier CSV !", "error");
+                return;
+            }
+
+            baseDonneesCategories = {};
+            const fichiersCSV = Array.from(input.files).sort((a, b) => 
+                a.name.localeCompare(b.name, "fr", { sensitivity: "base" })
+            );
+
+            const lignesARattacher = [
+                "Total P/L for Statement Period", "Total P/L for Period",
+                "P/L Total pour période relevé de compte", "Net P/L",
+                "Total Dividends", "Total Interest", "Total Tax",
+                "Total Commissions", "Total Fee"
+            ];
+
+            let derniereCategorieValide = null;
+            let totalLignesTraitees = 0;
+
+            for (let fichier of fichiersCSV) {
+                const nomFichier = fichier.name;
+                const nomBase = nomFichier.replace(/\.csv$/i, '');
+                const contenu = await fichier.text();
+                const lignes = contenu.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+                for (let i = 0; i < lignes.length; i++) {
+                    const ligneTexte = lignes[i].trim();
+                    if (ligneTexte === '') continue;
+
+                    const cellules = parseCSVLine(ligneTexte);
+                    const categorieOriginale = cellules[0];
+                    const typeLigne = cellules[1] ? cellules[1].toLowerCase() : '';
+                    const estUnSousTotal = (lignesARattacher.indexOf(categorieOriginale) !== -1);
+                    let categorieCible = categorieOriginale;
+
+                    if (estUnSousTotal && derniereCategorieValide) {
+                        categorieCible = derniereCategorieValide;
+                    }
+
+                    if (typeLigne === 'header') {
+                        if (!baseDonneesCategories[categorieCible]) {
+                            let enTete = ['Fichier Source'];
+                            for (let e = 0; e < cellules.length; e++) {
+                                enTete.push(cellules[e]);
+                            }
+                            baseDonneesCategories[categorieCible] = { enTete: enTete, lignes: [] };
+                        }
+                        derniereCategorieValide = categorieCible;
+                    } 
+                    else {
+                        if (!baseDonneesCategories[categorieCible]) {
+                            let enTeteDefaut = ['Fichier Source'];
+                            for (let e = 0; e < cellules.length; e++) {
+                                enTeteDefaut.push('Col ' + e);
+                            }
+                            baseDonneesCategories[categorieCible] = { enTete: enTeteDefaut, lignes: [] };
+                        }
+
+                        cellules.unshift(nomBase);
+                        baseDonneesCategories[categorieCible].lignes.push(cellules);
+                        totalLignesTraitees++;
+
+                        if (!estUnSousTotal) {
+                            derniereCategorieValide = categorieCible;
+                        }
+                    }
+                }
+            }
+
+            await sauvegarderDansIndexedDB();
+
+            const categoriesTrouvees = Object.keys(baseDonneesCategories);
+            afficherAlerte(
+                `✅ <b>Consolidation réussie !</b> ${fichiersCSV.length} fichiers fusionnés. ${totalLignesTraitees} lignes d'historique réparties dans ${categoriesTrouvees.length} catégories.`,
+                "success"
+            );
+
+            const select = document.getElementById('selectCategorie');
+            select.innerHTML = "";
+            categoriesTrouvees.forEach(cat => {
+                select.innerHTML += `<option value="${cat}">${cat} (${baseDonneesCategories[cat].lignes.length} lignes)</option>`;
+            });
+        }
+
+        async function sauvegarderDansIndexedDB() {
+            const db = ibkrDb.getDb();
+            const tx = db.transaction(["transactions"], "readwrite");
+            const store = tx.objectStore("transactions");
+
+            let compteur = 0;
+
+            for (const [categorie, data] of Object.entries(baseDonneesCategories)) {
+                for (const ligne of data.lignes) {
+                    if (ligne.length < 2) continue;
+
+                    const dateStr = extraireColonne(categorie, ligne, 'dateCol');
+                    const heureStr = extraireColonne(categorie, ligne, 'heureCol') || "00:00:00";
+                    const symbole = extraireColonne(categorie, ligne, 'symbolCol') || "N/A";
+                    const montantStr = extraireColonne(categorie, ligne, 'montantCol') || "0";
+
+                    let dateNormalisee = normaliserDate(dateStr);
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateNormalisee)) {
+                        dateNormalisee = new Date().toISOString().split('T')[0];
+                    }
+
+                    const montant = parseFloat(montantStr.toString().replace(',', '.')) || 0;
+                    const annee = dateNormalisee.split('-')[0];
+                    const description = ligne.slice(0, 3).join(" | ");
+                    const id = await CleMetierCalculator.calculerCle(
+                        categorie, dateNormalisee, heureStr, symbole, montant, description
+                    );
+
+                    const transaction = {
+                        id,
+                        categorie,
+                        date: dateNormalisee,
+                        annee,
+                        heure: heureStr,
+                        symbole,
+                        montant,
+                        description,
+                        ligneFull: ligne,
+                        dateImport: new Date().toISOString()
+                    };
+
+                    await new Promise((resolve, reject) => {
+                        const req = store.put(transaction);
+                        req.onsuccess = () => { compteur++; resolve(); };
+                        req.onerror = () => reject(req.error);
+                    });
+                }
+            }
+
+            console.log(`✓ ${compteur} transactions sauvegardées`);
+        }
+
+        async function chargerDupeDB() {
+            try {
+                const transactions = await ibkrDb.getAll('transactions');
+                if (transactions.length === 0) {
+                    afficherAlerte("❌ Aucune donnée trouvée en mémoire locale", "error");
+                    return;
+                }
+
+                // Reconstituer baseDonneesCategories
+                baseDonneesCategories = {};
+                const categoriesMap = {};
+
+                for (const tx of transactions) {
+                    if (!categoriesMap[tx.categorie]) {
+                        categoriesMap[tx.categorie] = [];
+                    }
+                    categoriesMap[tx.categorie].push(tx);
+                }
+
+                for (const [cat, txs] of Object.entries(categoriesMap)) {
+                    baseDonneesCategories[cat] = {
+                        enTete: ['ID', 'Catégorie', 'Date', 'Heure', 'Symbole', 'Montant'],
+                        lignes: txs.map(tx => [tx.id, cat, tx.date, tx.heure, tx.symbole, tx.montant.toString()])
+                    };
+                }
+
+                const select = document.getElementById('selectCategorie');
+                select.innerHTML = "";
+                Object.keys(baseDonneesCategories).forEach(cat => {
+                    select.innerHTML += `<option value="${cat}">${cat} (${baseDonneesCategories[cat].lignes.length} lignes)</option>`;
+                });
+
+                afficherAlerte(
+                    `✅ ${transactions.length} transactions chargées depuis le stockage local !`,
+                    "success"
+                );
+            } catch (err) {
+                afficherAlerte(`❌ Erreur : ${err.message}`, "error");
+            }
+        }
+
+        function afficherDonneesCategorie() {
+            const categorieSelectionnee = document.getElementById('selectCategorie').value;
+            if (!baseDonneesCategories[categorieSelectionnee]) return;
+
+            const dataObj = baseDonneesCategories[categorieSelectionnee];
+            const thead = document.getElementById('enteteTableau');
+            const tbody = document.getElementById('corpsTableau');
+
+            thead.innerHTML = "<tr>" + dataObj.enTete.map(h => `<th>${h}</th>`).join('') + "</tr>";
+            tbody.innerHTML = dataObj.lignes.map(ligne => {
+                return "<tr>" + ligne.map((cellule, index) => {
+                    if(index === 0) return `<td><span class="badge primary">${cellule}</span></td>`;
+                    return `<td>${cellule || ''}</td>`;
+                }).join('') + "</tr>";
+            }).join('');
+        }
+
+        async function afficherStatistiques() {
+            try {
+                const transactions = await ibkrDb.getAll('transactions');
+                
+                // Statistiques globales
+                const categories = new Set(transactions.map(t => t.categorie));
+                const annees = new Set(transactions.map(t => t.annee));
+                const symboles = new Set(transactions.map(t => t.symbole));
+
+                // Grille stats
+                const statsGrid = document.getElementById('statsGrid');
+                statsGrid.innerHTML = `
+                    <div class="stat-box">
+                        <div class="label">Transactions totales</div>
+                        <div class="value">${transactions.length}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Catégories</div>
+                        <div class="value">${categories.size}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Années</div>
+                        <div class="value">${annees.size}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Symboles uniques</div>
+                        <div class="value">${symboles.size}</div>
+                    </div>
+                `;
+
+                // Répartition par année
+                const parAnnee = {};
+                transactions.forEach(tx => {
+                    parAnnee[tx.annee] = (parAnnee[tx.annee] || 0) + 1;
+                });
+                document.getElementById('statsYears').innerHTML = Object.entries(parAnnee)
+                    .sort((a, b) => b[0] - a[0])
+                    .map(([annee, count]) => `<div>${annee}: <strong>${count}</strong> transactions</div>`)
+                    .join('');
+
+                // Répartition par catégorie
+                const parCategorie = {};
+                transactions.forEach(tx => {
+                    parCategorie[tx.categorie] = (parCategorie[tx.categorie] || 0) + 1;
+                });
+                document.getElementById('statsCategories').innerHTML = Object.entries(parCategorie)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, count]) => `<div>${cat}: <strong>${count}</strong> transactions</div>`)
+                    .join('');
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function afficherRoulements() {
+            try {
+                const transactions = await ibkrDb.getAll('transactions');
+                
+                // Filtrer les transactions d'options
+                const options = transactions.filter(t => t.categorie.toLowerCase().includes('option'));
+                
+                if (options.length === 0) {
+                    document.getElementById('roulementsContent').innerHTML = '<p>Aucune option détectée.</p>';
+                    return;
+                }
+
+                // Grouper par symbole
+                const parSymbole = {};
+                options.forEach(opt => {
+                    if (!parSymbole[opt.symbole]) parSymbole[opt.symbole] = [];
+                    parSymbole[opt.symbole].push(opt);
+                });
+
+                let html = '';
+                for (const [symbole, opts] of Object.entries(parSymbole)) {
+                    const sorted = opts.sort((a, b) => new Date(`${a.date}T${a.heure}`) - new Date(`${b.date}T${b.heure}`));
+                    
+                    html += `<div style="margin-bottom: 20px; padding: 15px; background: #f1f5f9; border-radius: 8px;">
+                        <h4>${symbole} (${sorted.length} transactions)</h4>`;
+                    
+                    sorted.forEach(opt => {
+                        html += `<div style="margin: 8px 0; font-size: 13px;">
+                            ${opt.date} ${opt.heure} - ${opt.montant} EUR
+                        </div>`;
+                    });
+                    
+                    html += '</div>';
+                }
+
+                document.getElementById('roulementsContent').innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function confirmActions(action) {
+            if (action === 'clear' && confirm("⚠️ Êtes-vous sûr ? Cela supprimera TOUTES les données locales.")) {
+                ibkrDb.clear();
+                baseDonneesCategories = {};
+                afficherAlerte("✓ Base vidée", "success");
+            }
+        }
+
+        async function confirmerViderBase() {
+            if (confirm("⚠️ Êtes-vous sûr ? Cela supprimera TOUTES les données locales.")) {
+                await ibkrDb.clear();
+                baseDonneesCategories = {};
+                document.getElementById('fichiersInput').value = '';
+                afficherAlerte("✓ Base vidée", "success");
+            }
+        }
+
+        function toggleDebug() {
+            const enabled = document.getElementById('debugMode').checked;
+            if (enabled) console.log("🐛 Mode debug activé");
+        }
+
+        function toggleDarkMode() {
+            const enabled = document.getElementById('darkMode').checked;
+            if (enabled) console.log("🌙 Mode sombre en développement");
+        }
+
+        // ============ INIT ============
+        window.addEventListener("DOMContentLoaded", async () => {
+            console.log("🚀 Initialisation...");
+            try {
+                ibkrDb = new IBKRDatabase();
+                await ibkrDb.init();
+                console.log("✓ IndexedDB prêt");
+            } catch (err) {
+                console.error("❌ Erreur init :", err);
+                afficherAlerte(`Erreur initialisation : ${err.message}`, "error");
+            }
+        });
+
+    </script>
+</body>
+</html>
